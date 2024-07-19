@@ -5,20 +5,16 @@ import { Link, useNavigate } from 'react-router-dom';
 export default function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
-  const [error, setError] = useState(null);
 
   const handleSubmit = async () => {
-    try {
-      const response = await axios.post(
-        'http://localhost:8080/api/users/saveUser',
-        { name: username }
-      );
-      console.log(response);
-      navigate('/lobby', { state: { username: username } });
-    } catch (error) {
-      console.error(error);
-      setError(error.message);
-    }
+    await axios.post(
+      'http://localhost:8080/api/users/saveUser', { name: username }
+    )
+    .then( response => {
+      localStorage.setItem("username", response.data.name);
+      navigate('/lobby');
+    })
+    .catch( error => console.log(error) );
   };
 
   return (
@@ -34,7 +30,6 @@ export default function Login() {
       <button type="submit" onClick={handleSubmit}>
         Submit
       </button>
-      {error && <p className="error-message">{error}</p>}
     </>
   );
 }

@@ -1,13 +1,12 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SockJS from "sockjs-client";
 import { over } from "stompjs";
 
 const stompClientInstance = {};
 
 export default function Lobby() {
-  const location = useLocation();
   const navigate = useNavigate();
   const [ready, setReady] = useState("");
   const [userId, setUserId] = useState("");
@@ -30,23 +29,33 @@ export default function Lobby() {
 
   const onReceived = (payload) => {
     const payloadData = JSON.parse(payload.body);
+    localStorage.setItem("side", payloadData.side.toLowerCase());
     setReady(payloadData.status);
-    console.log(ready);
   };
 
   const onError = (payload) => {
     console.log("Error");
   };
-
+  useEffect(() => {
+    return () => {
+      if (stompClientInstance.client) {
+        stompClientInstance.client.disconnect();
+        stompClientInstance.client = null;
+      }
+    };
+  }, []);
   useEffect(() => {
     if (ready === "READY") {
       stompClientInstance.client.disconnect();
       navigate('/game');
     } else if (ready === "") {
-      setUsername(location.state.username);
+      setUsername(localStorage.getItem("username"));
       if (username) {
         axios.get(`http://localhost:8080/api/users/getUserId/${username}`)
-          .then(response => setUserId(response.data))
+          .then(response => {
+            setUserId(response.data);
+            localStorage.setItem("userId", response.data);
+          })
           .catch(error => console.log(error));
       }
     }
