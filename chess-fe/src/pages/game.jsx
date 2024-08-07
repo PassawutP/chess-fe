@@ -28,7 +28,6 @@ export default function Game() {
       }
     };
     startUp();
-
     return () => {
       if (stompClientInstance.client) {
         stompClientInstance.client.disconnect();
@@ -44,7 +43,15 @@ export default function Game() {
         moveTo: move.to,
         userId: localStorage.getItem("userId")
       })
-     .then(response => console.log(response))
+     .then(response => {
+        console.log(response);
+        if ( turn === "white" ){
+          setTurn("black")
+        }
+        else if ( turn === "black" ){
+          setTurn("white")
+        }
+      })
      .catch(error => {
         console.error(error.response.data);
         console.error(error.response.status);
@@ -62,7 +69,7 @@ export default function Game() {
     console.log("Received message:", payload);
     const payloadData = JSON.parse(payload.body);
     console.log("Payload data:", payloadData);
-    setTurn(payloadData.turn);
+    setTurn(payloadData.turn.toLowerCase());
     const gameCopy = {...game };
     const move = makeAMove({
       from: payloadData.moveFrom,
@@ -78,9 +85,9 @@ export default function Game() {
   };
 
   function makeAMove(move) {
-    const gameCopy = {...game };
+    const gameCopy = { ...game };
     const result = gameCopy.move(move);
-    setGame(gameCopy);
+    // setGame(gameCopy);
     return result;
   }
 
@@ -90,7 +97,7 @@ export default function Game() {
       to: targetSquare,
       promotion: "q"
     });
-    if (move === null && turn!== localStorage.getItem("side")) return false;
+    if (move === null || turn !== localStorage.getItem("side").toLowerCase()) return false;
     setMove({ from: sourceSquare, to: targetSquare });
     return true;
   }
@@ -100,6 +107,7 @@ export default function Game() {
       position={game.fen()}
       onPieceDrop={onDrop}
       boardOrientation={localStorage.getItem("side")}
+      boardWidth={500}
     />
   );
 }
