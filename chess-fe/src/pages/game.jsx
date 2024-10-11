@@ -10,7 +10,7 @@ const stompClientInstance = {};
 export default function Game() {
   const [game, setGame] = useState(new Chess());
   const [move, setMove] = useState(null);
-  const [turn, setTurn] = useState("white");
+  const [turn, setTurn] = useState("WHITE");
 
   useEffect(() => {
     const startUp = async () => {
@@ -28,12 +28,7 @@ export default function Game() {
       }
     };
     startUp();
-    return () => {
-      if (stompClientInstance.client) {
-        stompClientInstance.client.disconnect();
-        stompClientInstance.client = null;
-      }
-    };
+
   }, []);
 
   useEffect(() => {
@@ -44,13 +39,6 @@ export default function Game() {
         userId: localStorage.getItem("userId")
       })
      .then(response => {
-        console.log(response);
-        if ( turn === "white" ){
-          setTurn("black")
-        }
-        else if ( turn === "black" ){
-          setTurn("white")
-        }
       })
      .catch(error => {
         console.error(error.response.data);
@@ -66,17 +54,14 @@ export default function Game() {
   };
 
   const onReceived = (payload) => {
-    console.log("Received message:", payload);
     const payloadData = JSON.parse(payload.body);
-    console.log("Payload data:", payloadData);
-    setTurn(payloadData.turn.toLowerCase());
+    setTurn(payloadData.turn);
     const gameCopy = {...game };
-    const move = makeAMove({
+    gameCopy.move({
       from: payloadData.moveFrom,
       to: payloadData.moveTo,
       promotion: "q"
     });
-    gameCopy.move(move);
     setGame(gameCopy);
   };
   
@@ -87,7 +72,6 @@ export default function Game() {
   function makeAMove(move) {
     const gameCopy = { ...game };
     const result = gameCopy.move(move);
-    // setGame(gameCopy);
     return result;
   }
 
@@ -97,17 +81,23 @@ export default function Game() {
       to: targetSquare,
       promotion: "q"
     });
-    if (move === null || turn !== localStorage.getItem("side").toLowerCase()) return false;
+    console.log(turn, localStorage.getItem("side"));
+    if (move === null || turn !== localStorage.getItem("side")) return false;
     setMove({ from: sourceSquare, to: targetSquare });
     return true;
   }
 
   return (
-    <Chessboard
-      position={game.fen()}
-      onPieceDrop={onDrop}
-      boardOrientation={localStorage.getItem("side")}
-      boardWidth={500}
-    />
+    <div>
+      <Chessboard
+        position={game.fen()}
+        onPieceDrop={onDrop}
+        boardOrientation={localStorage.getItem("side").toLocaleLowerCase()}
+        boardWidth={500}
+      />
+      {/* { <div>
+
+      </div>} */}
+    </div>
   );
 }

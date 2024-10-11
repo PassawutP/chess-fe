@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '@mui/material/Button';
 import { Container, TextField, Typography, CircularProgress, Snackbar } from "@mui/material";
@@ -31,6 +31,13 @@ export default function Login() {
   const handleCloseSnackbar = () => {
     setOpenSnackbar(false);
   };
+
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("username");
+    if (savedUsername) {
+      navigate("/lobby");
+    }
+  }, [navigate])
 
   return (
     <Container style={{ 

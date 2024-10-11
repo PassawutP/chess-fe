@@ -1,8 +1,11 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import axios from "axios";
 import SockJS from "sockjs-client";
 import { over } from "stompjs";
+
+import MenuAppBar from "../components/navbar";
 
 const stompClientInstance = {};
 
@@ -12,65 +15,70 @@ export default function Lobby() {
   const [userId, setUserId] = useState("");
   const [username, setUsername] = useState("");
 
+  // After clicking play
   const play = async () => {
     if (!stompClientInstance.client) {
       const Sock = new SockJS('http://localhost:8080/ws');
       stompClientInstance.client = over(Sock);
     }
-    await stompClientInstance.client.connect({}, onConnected, onError);
-    axios.get(`http://localhost:8080/api/queue/${userId}`)
+    
+    stompClientInstance.client.connect({}, onConnected, onError);
+
+    await axios.get(`http://localhost:8080/api/queue/${userId}`)
       .then(response => setReady(response.data.status))
       .catch(error => console.log(error));
   };
 
+  // After connecting with the socket
   const onConnected = () => {
     stompClientInstance.client.subscribe(`/queue/${userId}`, onReceived);
   };
 
   const onReceived = (payload) => {
-    const changePage = async () => {
-      const payloadData = JSON.parse(payload.body);
-      await localStorage.setItem("side", payloadData.side.toLowerCase());
-      setReady(payloadData.status);
-    }
-    changePage();
+    const payloadData = JSON.parse(payload.body);
+    localStorage.setItem("side", payloadData.side);
+    setReady(payloadData.status)
   };
 
   const onError = (payload) => {
-    console.log("Error");
+    console.log("Error", payload);
   };
 
+  // Initialize the page and disconnect WebSocket if still connected
   useEffect(() => {
-    return () => {
+    const initializePage = async () => {
       if (stompClientInstance.client) {
         stompClientInstance.client.disconnect();
         stompClientInstance.client = null;
       }
+
+      // Fetch username from localStorage and set it
+      const storedUsername = localStorage.getItem("username");
+      setUsername(storedUsername);
+
+      // Fetch userId from API based on username
+      await axios.get(`http://localhost:8080/api/users/getUserId/${storedUsername}`)
+        .then(response => {
+          setUserId(response.data);
+          localStorage.setItem("userId", response.data);
+        })
+        .catch(error => console.log(error));
     };
+
+    initializePage();
   }, []);
 
+  // When ready status changes
   useEffect(() => {
-    const checkReady = async () => {
-      if (ready === "READY") {
-        await stompClientInstance.client.disconnect();
-        navigate('/game');
-      } else if (!ready) {
-        setUsername(localStorage.getItem("username"));
-        if (username) {
-          axios.get(`http://localhost:8080/api/users/getUserId/${username}`)
-            .then(response => {
-              setUserId(response.data);
-              localStorage.setItem("userId", response.data);
-            })
-            .catch(error => console.log(error));
-        }
-      };
+    if (ready === "READY") {
+      stompClientInstance.client.disconnect();
+      navigate('/game');
     }
-    checkReady();
-  }, [ready, username]);
+  }, [ready, navigate]);
 
   return (
     <>
+      <MenuAppBar />
       <div>
         <h3>Lobby</h3>
         <button type="submit" onClick={play}>Play</button>
