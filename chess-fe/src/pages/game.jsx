@@ -11,6 +11,7 @@ export default function Game() {
   const [game, setGame] = useState(new Chess());
   const [move, setMove] = useState(null);
   const [turn, setTurn] = useState("WHITE");
+  const [status, setStatus] = useState("READY");
 
   useEffect(() => {
     const startUp = async () => {
@@ -29,6 +30,12 @@ export default function Game() {
     };
     startUp();
 
+    return () => {
+      if (stompClientInstance.client) {
+        stompClientInstance.client.disconnect();
+        stompClientInstance.client = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -50,12 +57,14 @@ export default function Game() {
   }, [move]);
 
   const onConnected = () => {
-    stompClientInstance.client.subscribe(`/game/${localStorage.getItem("gameId")}`, onReceived);
+    const gameId = localStorage.getItem("gameId");
+    if (gameId) {
+      stompClientInstance.client.subscribe(`/game/${gameId}`, onReceived);
+    }
   };
 
   const onReceived = (payload) => {
     const payloadData = JSON.parse(payload.body);
-    setTurn(payloadData.turn);
     const gameCopy = {...game };
     gameCopy.move({
       from: payloadData.moveFrom,
@@ -63,8 +72,12 @@ export default function Game() {
       promotion: "q"
     });
     setGame(gameCopy);
+    if (payloadData.status === "ENDING") {
+      setStatus("ENDING");
+    }
+    setTurn(payloadData.turn);
   };
-  
+
   const onError = (error) => {
     console.error("Error subscribing to topic:", error);
   };
@@ -81,8 +94,9 @@ export default function Game() {
       to: targetSquare,
       promotion: "q"
     });
-    console.log(turn, localStorage.getItem("side"));
-    if (move === null || turn !== localStorage.getItem("side")) return false;
+    console.log(turn)
+    console.log(localStorage.getItem("side"))
+    if (move === null || turn.toLowerCase() !== localStorage.getItem("side")) return false;
     setMove({ from: sourceSquare, to: targetSquare });
     return true;
   }
@@ -95,9 +109,11 @@ export default function Game() {
         boardOrientation={localStorage.getItem("side").toLocaleLowerCase()}
         boardWidth={500}
       />
-      {/* { <div>
-
-      </div>} */}
+      { (status === "ENDING") && 
+        <div>
+          {turn === "BLACK" ? "WHITE" : "BLACK"} WINS!
+        </div>
+      }
     </div>
   );
 }

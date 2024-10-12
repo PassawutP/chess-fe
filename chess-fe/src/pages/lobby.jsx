@@ -36,7 +36,7 @@ export default function Lobby() {
 
   const onReceived = (payload) => {
     const payloadData = JSON.parse(payload.body);
-    localStorage.setItem("side", payloadData.side);
+    localStorage.setItem("side", payloadData.side.toLowerCase());
     setReady(payloadData.status)
   };
 
@@ -52,11 +52,9 @@ export default function Lobby() {
         stompClientInstance.client = null;
       }
 
-      // Fetch username from localStorage and set it
       const storedUsername = localStorage.getItem("username");
       setUsername(storedUsername);
 
-      // Fetch userId from API based on username
       await axios.get(`http://localhost:8080/api/users/getUserId/${storedUsername}`)
         .then(response => {
           setUserId(response.data);
@@ -66,12 +64,22 @@ export default function Lobby() {
     };
 
     initializePage();
+
+    return () => {
+      if (stompClientInstance.client) {
+        stompClientInstance.client.disconnect();
+        stompClientInstance.client = null;
+      }
+    };
   }, []);
 
   // When ready status changes
   useEffect(() => {
     if (ready === "READY") {
-      stompClientInstance.client.disconnect();
+      if (stompClientInstance.client) {
+        stompClientInstance.client.disconnect();
+        stompClientInstance.client = null;
+      }
       navigate('/game');
     }
   }, [ready, navigate]);
